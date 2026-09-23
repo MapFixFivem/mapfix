@@ -1,0 +1,7 @@
+{
+  "name": "mapfix-tests",
+  "private": true,
+  "description": "Tests automatiques de MapFix (sécurité, parcours, données, mise en page)",
+  "scripts": { "test": "node run-all.js", "security": "node security.test.js" },
+  "devDependencies": { "jsdom": "^29.1.1", "puppeteer-core": "^24.43.1" }
+}
