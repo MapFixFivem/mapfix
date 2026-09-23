@@ -5,7 +5,7 @@
 
 const CONFIG = {
   discordInvite: 'https://discord.gg/mapfix',   // lien d'invitation (ex. https://discord.gg/xxxx) : active le bouton Discord du header
-  showDemo: true,      // affiche « Charger un exemple »
+  showDemo: false,     // true = affiche le bouton « Exemple » (charge de fausses ressources pour tester)
 };
 
 // Limites de robustesse (protection contre les archives piégées, les saisies abusives, la surcharge)

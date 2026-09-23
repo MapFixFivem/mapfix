@@ -18,7 +18,8 @@ const check = (name, cond, extra = '') => { cond ? ok++ : ko++; console.log((con
   await page.evaluate(() => { window.__osc = 0; const o = AudioContext.prototype.createOscillator; AudioContext.prototype.createOscillator = function () { window.__osc++; return o.call(this); }; });
   const osc = () => page.evaluate(() => window.__osc);
 
-  await page.click('#btnDemo'); await wait(1200);
+  await page.mouse.click(700, 450);   // un vrai clic : le navigateur n'autorise le son qu'après
+  await page.evaluate(() => document.getElementById('btnDemo').click()); await wait(1200);
   const a = await osc();
   check('son à l\'arrivée de l\'analyse', a > 0, `${a} notes`);
   await page.evaluate(() => document.querySelector('.conf .tick').click()); await wait(300);

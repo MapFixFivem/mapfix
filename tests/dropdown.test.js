@@ -15,7 +15,7 @@ const check = (name, cond, extra = '') => { cond ? ok++ : ko++; console.log((con
   await page.goto(URL, { waitUntil: 'networkidle2' });
   await page.evaluate(() => localStorage.clear());
   await page.reload({ waitUntil: 'networkidle2' });
-  await page.click('#btnDemo'); await wait(1200);
+  await page.evaluate(() => document.getElementById('btnDemo').click()); await wait(1200);
 
   check('plus d\'étiquettes « Critique / Moyen / Identique / Version différente »', await page.evaluate(() => !/CRITIQUE|MOYEN|IDENTIQUE|VERSION DIFF/i.test(document.getElementById('confList').innerText)));
   check('l\'étiquette « Non vérifiable » (fxap) est conservée', await page.evaluate(() => /NON VÉRIFIABLE/i.test(document.getElementById('confList').innerText)));

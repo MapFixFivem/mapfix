@@ -30,7 +30,7 @@ const check = (name, cond, extra = '') => { cond ? ok++ : ko++; console.log((con
     check(`accueil ${w}x${h} : tient dans l'écran, sans scroll`, m.sh <= m.ih + 1 && m.sw <= m.iw + 1, `contenu=${m.sh}x${m.sw} écran=${m.ih}x${m.iw}`);
     if (w === 1920) await page.screenshot({ path: dir + `20-devis-home-${w}.png` });
 
-    await page.click('#btnDemo'); await wait(800);
+    await page.evaluate(() => document.getElementById('btnDemo').click()); await wait(800);
     m = await measure();
     check(`analyse ${w}x${h} : tient dans l'écran, sans scroll`, m.sh <= m.ih + 1 && m.sw <= m.iw + 1, `contenu=${m.sh}x${m.sw} écran=${m.ih}x${m.iw}`);
     if (w === 1920) await page.screenshot({ path: dir + `21-devis-working-${w}.png` });
@@ -53,7 +53,7 @@ const check = (name, cond, extra = '') => { cond ? ok++ : ko++; console.log((con
   await page.goto(URL, { waitUntil: 'networkidle2' });
   await page.evaluate(() => localStorage.clear());
   await page.reload({ waitUntil: 'networkidle2' });
-  await page.click('#btnDemo'); await wait(800);
+  await page.evaluate(() => document.getElementById('btnDemo').click()); await wait(800);
   const mobileM = await measure();
   check('mobile : scroll de page normal accepté (pas de contenu coupé)', mobileM.sh >= mobileM.ih, `contenu=${mobileM.sh}px écran=${mobileM.ih}px`);
   await page.evaluate(() => document.getElementById('btnSend').scrollIntoView({ behavior: 'instant', block: 'center' }));

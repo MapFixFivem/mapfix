@@ -26,7 +26,7 @@ const check = (name, cond, extra = '') => { cond ? ok++ : ko++; console.log((con
   check('EN : <html lang="en">', await page.evaluate(() => document.documentElement.lang) === 'en');
   check('EN : mémorisé', await page.evaluate(() => localStorage.getItem('mf_lang')) === '"en"' || await page.evaluate(() => /en/.test(localStorage.getItem('mf_lang'))));
 
-  await page.click('#btnDemo'); await wait(800);
+  await page.evaluate(() => document.getElementById('btnDemo').click()); await wait(800);
   check('EN : stats dynamiques', (await txt('#stats')).includes('Resources'));
   check('express = +15 %', (await txt('#expressLbl')) === '(+15%)');
   await page.click('.lang [data-lang="fr"]'); await wait(150);

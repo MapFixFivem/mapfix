@@ -22,7 +22,7 @@ const check = (name, cond, extra = '') => { cond ? ok++ : ko++; console.log((con
   await page.goto(URL, { waitUntil: 'networkidle2' });
   await page.evaluate(() => localStorage.clear());
   await page.reload({ waitUntil: 'networkidle2' });
-  await page.click('#btnDemo'); await wait(700);
+  await page.evaluate(() => document.getElementById('btnDemo').click()); await wait(700);
   await page.evaluate(() => { document.querySelector('#discord').value = 'lenzo#0001'; document.querySelector('#msg').value = 'Serveur RP, urgent stp'; });
   const total1 = await page.evaluate(() => document.querySelector('#total').textContent);
   await page.click('#btnSend'); await wait(1000);

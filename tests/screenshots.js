@@ -19,7 +19,7 @@ const wait = ms => new Promise(r => setTimeout(r, ms));
   const shot = async (name, full = true) => { await wait(350); await page.screenshot({ path: dir + name + '.png', fullPage: full }); console.log('shot', name); };
 
   await shot('1-home');
-  await page.click('#btnDemo'); await wait(700);
+  await page.evaluate(() => document.getElementById('btnDemo').click()); await wait(700);
   await shot('2-analysis');
 
   // devis : décoche deco_plant, prépare l'export
