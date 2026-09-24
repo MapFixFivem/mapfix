@@ -42,11 +42,10 @@ const check = (name, cond, extra = '') => { cond ? ok++ : ko++; console.log((con
   check('l\'analyse déclenche un appel vers le webhook Discord', calls.length === 1, JSON.stringify(calls.map(c => c.url)));
   check('URL exacte = CONFIG.webhookUrl', calls[0]?.url === 'https://discord.com/api/webhooks/1/faux-token');
   const start = calls[0]?.body;
-  check('flag Components V2 (32768) posé', start?.flags === (1 << 15));
   check('mentions désactivées (allowed_mentions.parse = [])', Array.isArray(start?.allowed_mentions?.parse) && start.allowed_mentions.parse.length === 0);
-  check('un composant Container (type 17) à la racine', Array.isArray(start?.components) && start.components[0]?.type === 17);
+  check('un embed avec une couleur d\'accent à la racine', Array.isArray(start?.embeds) && typeof start.embeds[0]?.color === 'number' && !start.components && !start.flags);
   const flat = JSON.stringify(start);
-  check('contient bien le nombre de ressources et de fichiers de la démo', /Ressources.*\*\*.*4/.test(flat.replace(/\\/g, '')) || /"content":"[^"]*4/.test(flat));
+  check('contient bien le nombre de ressources et de fichiers de la démo', /"name":"Ressources","value":"4"/.test(flat) && /"name":"Fichiers","value":"24"/.test(flat));
   check('pas de doublon si on relance la même analyse à l\'identique', await page.evaluate(async () => { window.__calls.length = 0; document.getElementById('btnDemo').click(); await new Promise(r => setTimeout(r, 600)); return window.__calls.length === 0; }));
 
   // pseudo + message contenant une tentative de mention : ne doit jamais planter, et allowed_mentions doit rester vide

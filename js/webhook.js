@@ -1,6 +1,9 @@
-/* MapFix · webhook.js — Notifie un webhook Discord (Components V2) quand un client commence une analyse et quand il
-   télécharge son récapitulatif. Désactivé si CONFIG.webhookUrl est vide et rien n'est réglé dans le navigateur.
+/* MapFix · webhook.js — Notifie un webhook Discord (embed classique) quand un client commence une analyse et quand
+   il télécharge son récapitulatif. Désactivé si CONFIG.webhookUrl est vide et rien n'est réglé dans le navigateur.
    Un échec réseau (webhook supprimé, hors ligne…) ne doit jamais gêner le client : tout est avalé silencieusement.
+   (Les Components V2 — la mise en page « bloc + séparateurs » plus récente — ont été essayés en premier, mais sont
+   systématiquement refusés par l'API Discord avec « message vide », quel que soit le format exact ; les embeds
+   classiques, testés en direct, fonctionnent de manière fiable et donnent un rendu tout aussi stylé.)
 
    Où est l'URL du webhook : dans CONFIG.webhookUrl (js/config.js), en clair, choix assumé (voir le commentaire de ce
    champ et docs/SECURITE.md) — c'est nécessaire pour que la notification parte vraiment quand un CLIENT (pas
@@ -22,22 +25,20 @@ const wh = (() => {
   // par allowed_mentions, quel que soit le texte tapé.
   const mdEsc = s => String(s).replace(/([\\`*_~|])/g, '\\$1').replace(/^>/gm, '\\>').replace(/\n{3,}/g, '\n\n');
 
-  function post(components) {
+  function post(embed) {
     const url = whUrl();
     if (!url) return;
+    embed.timestamp = new Date().toISOString();
     try {
       fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ flags: 1 << 15, allowed_mentions: { parse: [] }, components }),
+        body: JSON.stringify({ embeds: [embed], allowed_mentions: { parse: [] } }),
       }).catch(() => {});
     } catch {}
   }
 
-  const txt = s => ({ type: 10, content: s });
-  const sep = big => ({ type: 14, divider: true, spacing: big ? 2 : 1 });
-  const box = (color, children) => [{ type: 17, accent_color: color, components: children }];
-  const rel = () => `<t:${Math.floor(Date.now() / 1000)}:R>`;
+  const field = (name, value, inline = true) => ({ name, value: String(value).slice(0, 1024), inline });
 
   function start(state) {
     if (!whUrl() || CONFIG.webhookOnStart === false) return;
@@ -48,39 +49,39 @@ const wh = (() => {
     const groups = billingGroups(state.conflicts, DEFAULTS);
     const est = groups.reduce((s, g) => s + g.price, 0);
     const known = load('mf_discord', '');
-    post(box(COLOR_START, [
-      txt(`## 🗺️ Nouvelle analyse en cours\n-# ${rel()} · un client dépose ses ressources sur MapFix`),
-      sep(),
-      txt([
-        `**Ressources** ${state.resources.length}  ·  **Fichiers** ${state.totalFiles}`,
-        `**Conflits** ${state.conflicts.length} (${groups.length} facturable${groups.length > 1 ? 's' : ''})`,
-        enc ? `**Ressources cryptées** ${enc}` : null,
-        known ? `**Pseudo mémorisé** ${mdEsc(known)}` : null,
-      ].filter(Boolean).join('\n')),
-      sep(),
-      txt(`### Estimation à cet instant : ${eur(est)}`),
-      txt("-# Rien n'a encore été envoyé par le client : il est peut-être encore en train de cocher ses conflits."),
-    ]));
+    post({
+      title: '🗺️ Nouvelle analyse en cours',
+      description: "Un client dépose ses ressources sur MapFix — rien n'a encore été envoyé, il est peut-être en train de cocher ses conflits.",
+      color: COLOR_START,
+      fields: [
+        field('Ressources', state.resources.length),
+        field('Fichiers', state.totalFiles),
+        field('Conflits', `${state.conflicts.length} (${groups.length} facturable${groups.length > 1 ? 's' : ''})`),
+        enc ? field('Cryptées', enc) : null,
+        known ? field('Pseudo mémorisé', mdEsc(known)) : null,
+        field('Estimation à cet instant', eur(est), false),
+      ].filter(Boolean),
+      footer: { text: 'MapFix' },
+    });
   }
 
   function final(data, q) {
     if (!whUrl() || CONFIG.webhookOnSend === false) return;
     const lines = q.groups.slice(0, 8).map(g => `• \`${g.res.join(' + ')}\` — ${eur(g.price)}`);
-    if (q.groups.length > 8) lines.push(`_… +${q.groups.length - 8} autre(s)_`);
-    post(box(COLOR_FINAL, [
-      txt(`## 💰 Récapitulatif téléchargé\n-# ${rel()} · MapFix`),
-      sep(),
-      txt([
-        `**Pseudo** ${mdEsc(data.meta.name || '—')}`,
-        data.meta.message ? `**Message** ${mdEsc(data.meta.message)}` : null,
-        data.express ? `**Express** oui (+${DEFAULTS.expressPct}%)` : null,
-        data.mode === 'edit' ? '**Remise appliquée** (récapitulatif rouvert et modifié)' : null,
-      ].filter(Boolean).join('\n')),
-      sep(),
-      txt(lines.join('\n') || '_Aucun conflit sélectionné._'),
-      sep(true),
-      txt(`### Total : ${eur(q.total)}`),
-    ]));
+    if (q.groups.length > 8) lines.push(`… +${q.groups.length - 8} autre(s)`);
+    post({
+      title: '💰 Récapitulatif téléchargé',
+      color: COLOR_FINAL,
+      fields: [
+        field('Pseudo', mdEsc(data.meta.name || '—')),
+        data.express ? field('Express', `oui (+${DEFAULTS.expressPct}%)`) : null,
+        data.mode === 'edit' ? field('Type', 'récapitulatif modifié') : null,
+        data.meta.message ? field('Message', mdEsc(data.meta.message), false) : null,
+        field('Détail', lines.join('\n') || 'Aucun conflit sélectionné.', false),
+        field('Total', `**${eur(q.total)}**`, false),
+      ].filter(Boolean),
+      footer: { text: 'MapFix' },
+    });
   }
 
   return { start, final, get url() { return whUrl(); } };
