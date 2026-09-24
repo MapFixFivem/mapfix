@@ -15,13 +15,23 @@ const LIMITS_RECAP_CONFLICTS = 20000;   // doit rester synchronisé avec LIMITS.
   const src = Object.fromEntries(jsFiles.map(f => [f, read('js/' + f)]));
   const all = html + Object.values(src).join('\n') + read('css/style.css');
 
-  check('CSP présente (meta) et stricte : script-src \'self\', connect-src \'none\', pas d\'unsafe-eval ni de script en ligne',
-    /Content-Security-Policy/.test(html) && /script-src 'self'(?!\s+'unsafe)/.test(html) && /connect-src 'none'/.test(html) && !/unsafe-eval/.test(html) && !/script-src[^;]*unsafe-inline/.test(html));
+  // connect-src : rien par défaut (webhookUrl vide), mais si l'admin configure un webhook, la seule adresse
+  // jamais contactée reste Discord — jamais un joker ni un autre domaine.
+  const connectSrc = (html.match(/connect-src ([^;]+);/) || [])[1] || '';
+  check('CSP présente (meta) et stricte : script-src \'self\', connect-src limité à Discord, pas d\'unsafe-eval ni de script en ligne',
+    /Content-Security-Policy/.test(html) && /script-src 'self'(?!\s+'unsafe)/.test(html) && !/unsafe-eval/.test(html) && !/script-src[^;]*unsafe-inline/.test(html)
+    && connectSrc.split(/\s+/).every(h => /^https:\/\/discord(app)?\.com$/.test(h)) && !connectSrc.includes('*'), connectSrc);
   check('aucune ressource externe (http/https) dans la page', !/(?:src|href)="https?:/i.test(html) && !/url\(\s*['"]?https?:/i.test(read('css/style.css')) && !/url\(\s*['"]?https?:/i.test(read('fonts/fonts.css')));
   check('aucun gestionnaire en ligne (onclick=…) ni script en ligne', !/\son[a-z]+\s*=\s*["']/i.test(html) && !Object.values(src).some(s => /\son(click|change|input|load|error)\s*=\s*["']/.test(s)) && !/<script(?![^>]*\bsrc=)[^>]*>\s*\S/i.test(html));
   check('aucun eval / new Function / document.write / setTimeout(string)', !Object.values(src).some(s => /\beval\s*\(|new Function\s*\(|document\.write\s*\(|setTimeout\(\s*['"`]/.test(s)));
   check('aucun mot de passe, jeton ni webhook dans le code public (le site ne parle à aucun serveur)', !/adminPassword|discordWebhook|discord\.com\/api\/webhooks|password\s*[:=]\s*['"][^'"]{3,}|apiKey\s*[:=]/i.test(all));
-  check('aucun appel réseau dans le code (fetch/XMLHttpRequest/WebSocket) : le site n\'envoie rien nulle part', !/\bfetch\s*\(|new\s+XMLHttpRequest|new\s+WebSocket/.test(Object.values(src).join('\n')));
+  // Le seul appel réseau du site est le webhook Discord facultatif, confiné à js/webhook.js et gardé par
+  // CONFIG.webhookUrl : tous les autres fichiers restent sans fetch/XHR/WebSocket, comme avant.
+  const NET_RE = /\bfetch\s*\(|new\s+XMLHttpRequest|new\s+WebSocket/;
+  check('aucun appel réseau ailleurs que js/webhook.js (fetch/XMLHttpRequest/WebSocket)',
+    Object.entries(src).every(([f, s]) => f === 'webhook.js' || !NET_RE.test(s)));
+  check('js/webhook.js : le fetch est bien gardé par CONFIG.webhookUrl (rien n\'est envoyé tant qu\'il est vide) et cible toujours cette URL',
+    NET_RE.test(src['webhook.js']) && /if\s*\(\s*!url\s*\)\s*return/.test(src['webhook.js']) && /fetch\(url,/.test(src['webhook.js']));
   const CTRL = /[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f\u200e\u200f\u202a-\u202e\u2066-\u2069]/;
   const bad = [...jsFiles.map(f => 'js/' + f), 'index.html', 'css/style.css'].filter(f => CTRL.test(read(f)));
   check('aucun caractère invisible ou de renversement (« Trojan Source ») dans les sources', bad.length === 0, bad.join(', '));

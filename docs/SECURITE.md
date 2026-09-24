@@ -29,7 +29,7 @@ Ce qui reste à défendre :
 | ReDoS | Les motifs `escrow_ignore` écrits par le *client* dans son manifest ne sont **jamais** compilés en RegExp : comparaison linéaire, ≤ 6 jokers, budget de calcul borné |
 | XSS | Toute donnée affichée passe par `esc()` — y compris un récapitulatif importé qui aurait été trafiqué avant d'être renvoyé |
 | Récapitulatif importé (donnée non fiable) | `sanitizeRecap()` revalide chaque champ (types, longueurs, bornes) avant de l'afficher ; un fichier qui n'est pas un récapitulatif MapFix valide est ignoré proprement |
-| Fuite réseau | Aucun `fetch`/`XMLHttpRequest` dans le code ; CSP `connect-src 'none'` : le navigateur ne peut techniquement contacter aucun serveur |
+| Fuite réseau | Aucun `fetch`/`XMLHttpRequest` en dehors de `js/webhook.js`, lui-même gardé par `CONFIG.webhookUrl` (vide par défaut) ; CSP `connect-src` limité aux domaines Discord — le navigateur ne peut techniquement contacter que ça, jamais un autre serveur |
 | Ressources tierces | CSP stricte (`script-src 'self'`, pas de script en ligne) ; JSZip et polices **hébergés** avec le site, empreinte SHA-384 vérifiée par test |
 | Clickjacking | Auto-effacement si la page est encadrée (`js/main.js`) |
 | Caractères invisibles | Contrôle automatisé des sources (`tests/security.test.js`) : un test échoue s'il en trouve |
@@ -48,6 +48,15 @@ Tout est couvert par des tests (`tests/security.test.js`, `tests/recap.test.js`)
 - **Il n'y a rien à mettre en production côté serveur.** Ce site n'est pas une démo en attente d'un backend : c'est
   l'architecture définitive. S'il fallait un jour un vrai suivi de commande ou un vrai paiement en ligne, ce serait
   un projet différent, avec une vraie base de données et une vraie authentification — pas une évolution de celui-ci.
+- **`CONFIG.webhookUrl` n'est pas un secret protégé.** Si tu colles l'URL de ton webhook Discord dans `js/config.js`
+  pour recevoir une notification à chaque analyse et à chaque téléchargement de récapitulatif (voir `js/webhook.js`),
+  n'importe quel visiteur du site en ligne peut la lire dans ce fichier (`Ctrl+U`, ou directement sur GitHub si le
+  dépôt est public) et l'utiliser lui-même pour poster de faux messages dans ton salon — un webhook ne permet que
+  d'écrire, jamais de lire les autres salons ni les membres. Ce n'est pas une faille du site : c'est une limite de
+  tout webhook appelé directement depuis un navigateur, sans serveur intermédiaire pour le cacher. Si ça arrive,
+  supprime le webhook dans Discord et recrées-en un autre (l'ancienne URL devient inerte). Pour une protection plus
+  sérieuse, il faudrait un petit relais côté serveur (ex. un Cloudflare Worker) qui garde l'URL secrète — hors du
+  périmètre « site 100 % statique » de ce projet, mais tout à fait ajoutable si besoin.
 
 ## 4. Avant de publier
 

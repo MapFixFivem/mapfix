@@ -41,6 +41,7 @@ async function handleEntries(getEntries) {
   enterWorking();
   if (!$('#discord').value) $('#discord').value = validPseudo(load('mf_discord', ''));
   renderAnalysis();
+  if (typeof wh !== 'undefined') wh.start(S);
   const rj = S.rejected;
   if (rj && (rj.blocked.length || rj.badPath || rj.duplicate))
     toast(t('m.skipped', { n: rj.blocked.length + rj.badPath + rj.duplicate }));

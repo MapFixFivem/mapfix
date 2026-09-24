@@ -130,6 +130,7 @@ function exportRecap() {
   hint.className = 'hint ok';
   hint.textContent = t('x.done', { f: a.download });
   if (typeof missionPassed === 'function') missionPassed();
+  if (typeof wh !== 'undefined') wh.final(data, q);
 }
 
 /* ---------- import : réouverture d'un récapitulatif pour le modifier ---------- */

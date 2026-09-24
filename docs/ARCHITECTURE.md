@@ -6,7 +6,8 @@ Il s'ouvre en double-cliquant sur `index.html` et se publie tel quel sur GitHub 
 MapFix n'est **pas** une plateforme de commandes : c'est un outil de chiffrage. Le client dépose ses ressources,
 obtient un prix, et télécharge un **récapitulatif** (un fichier `.html` autonome) qu'il envoie lui-même sur Discord.
 Tout ce qui suit — validation, paiement, envoi des vrais fichiers, livraison, avis — se passe **à la main, sur
-Discord**, hors du site. Le site ne conserve rien d'une visite à l'autre et ne contacte aucun serveur.
+Discord**, hors du site. Le site ne conserve rien d'une visite à l'autre et ne contacte aucun serveur, à l'exception
+d'un webhook Discord facultatif (`CONFIG.webhookUrl`, voir `js/webhook.js`) qui notifie l'admin en direct.
 
 ## Arborescence
 

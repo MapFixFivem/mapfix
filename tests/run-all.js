@@ -10,6 +10,7 @@ const suites = [
   ['dropdown.test.js', 'Menu « Ressource conservée » (souris, clavier)'],
   ['analysis.test.js', 'Analyse : _manifest ignoré, dossiers imbriqués'],
   ['filters.test.js', 'Filtres des conflits (type, LOD, lumières, occlusion)'],
+  ['webhook.test.js', 'Webhook Discord (désactivé par défaut, notifications, anti-ping)'],
   ['i18n.test.js', 'Langue FR / EN et express +15 %'],
   ['layout-fit.test.js', "Mise en page (tient dans l'écran sur poste de travail, défile sur mobile)"],
 ];

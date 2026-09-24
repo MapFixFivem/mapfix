@@ -7,7 +7,8 @@ Discord. Tu peux rouvrir ce même fichier sur le site pour le modifier (une remi
 Tout le reste — validation, envoi des vrais fichiers, paiement, livraison, avis — se passe **sur Discord**, à la main.
 
 > Le site ne parle à aucun serveur et ne conserve rien d'une visite à l'autre : pas de compte, pas de mot de passe,
-> pas de base de données. Voir [`docs/SECURITE.md`](docs/SECURITE.md).
+> pas de base de données. Seule exception facultative : un webhook Discord (`CONFIG.webhookUrl`) qui te notifie
+> quand un client dépose ses ressources et quand il télécharge son récapitulatif. Voir [`docs/SECURITE.md`](docs/SECURITE.md).
 
 ## Lancer
 

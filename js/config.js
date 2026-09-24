@@ -6,6 +6,14 @@
 const CONFIG = {
   discordInvite: 'https://discord.gg/mapfix',   // lien d'invitation (ex. https://discord.gg/xxxx) : active le bouton Discord du header
   showDemo: false,     // true = affiche le bouton « Exemple » (charge de fausses ressources pour tester)
+
+  // Notifications automatiques (facultatif) : colle ici l'URL d'un webhook Discord (Paramètres du serveur →
+  // Intégrations → Webhooks → Nouveau webhook → Copier l'URL) pour recevoir une alerte dans un salon.
+  // Vide (par défaut) = rien n'est envoyé, comme avant. Voir docs/SECURITE.md : cette URL n'est pas un secret
+  // protégé sur un site 100 % statique, n'importe qui peut la lire dans ce fichier une fois le site en ligne.
+  webhookUrl: '',
+  webhookOnStart: true,   // alerte dès qu'une analyse aboutit (avant même que le client remplisse quoi que ce soit)
+  webhookOnSend: true,    // alerte quand le client télécharge son récapitulatif (montant final, pseudo, message)
 };
 
 // Limites de robustesse (protection contre les archives piégées, les saisies abusives, la surcharge)

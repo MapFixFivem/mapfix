@@ -6,8 +6,9 @@
 <title>MapFix — Devis de fix de mapping</title>
 <link rel="icon" type="image/png" href="img/favicon.png">
 <!-- Politique de sécurité du contenu : rien ne se charge ni ne s'exécute hors de ce site (aucun script en ligne, aucune
-     ressource tierce), et le site ne parle à aucun serveur (connect-src none) : tout reste dans ton navigateur. -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'none'; form-action 'none'; base-uri 'none'; object-src 'none'">
+     ressource tierce). Le site ne parle à aucun serveur, sauf le webhook Discord de l'admin s'il en a réglé un dans
+     js/config.js (connect-src) : c'est le seul cas où quelque chose part de ce site. -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src https://discord.com https://discordapp.com; form-action 'none'; base-uri 'none'; object-src 'none'">
 <meta name="referrer" content="no-referrer">
 <meta name="color-scheme" content="dark">
 <link rel="stylesheet" href="fonts/fonts.css">
@@ -172,6 +173,7 @@
 <script src="js/analysis.js"></script>
 <script src="js/quote.js"></script>
 <script src="js/recap.js"></script>
+<script src="js/webhook.js"></script>
 <script src="js/dropdown.js"></script>
 <script src="js/fx.js"></script>
 <script src="js/main.js"></script>
