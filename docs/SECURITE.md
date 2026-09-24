@@ -48,15 +48,18 @@ Tout est couvert par des tests (`tests/security.test.js`, `tests/recap.test.js`)
 - **Il n'y a rien à mettre en production côté serveur.** Ce site n'est pas une démo en attente d'un backend : c'est
   l'architecture définitive. S'il fallait un jour un vrai suivi de commande ou un vrai paiement en ligne, ce serait
   un projet différent, avec une vraie base de données et une vraie authentification — pas une évolution de celui-ci.
-- **`CONFIG.webhookUrl` n'est pas un secret protégé.** Si tu colles l'URL de ton webhook Discord dans `js/config.js`
-  pour recevoir une notification à chaque analyse et à chaque téléchargement de récapitulatif (voir `js/webhook.js`),
-  n'importe quel visiteur du site en ligne peut la lire dans ce fichier (`Ctrl+U`, ou directement sur GitHub si le
-  dépôt est public) et l'utiliser lui-même pour poster de faux messages dans ton salon — un webhook ne permet que
-  d'écrire, jamais de lire les autres salons ni les membres. Ce n'est pas une faille du site : c'est une limite de
-  tout webhook appelé directement depuis un navigateur, sans serveur intermédiaire pour le cacher. Si ça arrive,
-  supprime le webhook dans Discord et recrées-en un autre (l'ancienne URL devient inerte). Pour une protection plus
-  sérieuse, il faudrait un petit relais côté serveur (ex. un Cloudflare Worker) qui garde l'URL secrète — hors du
-  périmètre « site 100 % statique » de ce projet, mais tout à fait ajoutable si besoin.
+- **L'URL du webhook Discord ne doit JAMAIS être collée dans `js/config.js` sur un dépôt public.** C'est un vrai
+  secret : quiconque la lit peut poster de faux messages dans ton salon (un webhook ne permet que d'écrire, jamais de
+  lire les autres salons ni les membres). Un fichier commis reste lisible pour toujours dans l'historique GitHub,
+  même après l'avoir « retiré » d'un commit suivant — et des robots scannent en continu les dépôts publics à la
+  recherche exactement de ce motif. C'est pourquoi le réglage normal se fait **dans le navigateur de l'admin, jamais
+  dans le dépôt** : triple-clic sur le logo du site en ligne, coller l'URL, valider (voir `js/webhook.js`). Elle est
+  stockée en `localStorage`, lue uniquement par ce navigateur, et ne transite jamais par GitHub. `CONFIG.webhookUrl`
+  reste un simple repli, vide par défaut, réservé à un dépôt privé ou un test en local. Si une URL de webhook fuit
+  par un autre biais (capture d'écran, copier-coller malheureux…), supprime-la dans Discord et recrées-en une autre :
+  l'ancienne devient inerte. Pour une protection encore plus sérieuse (l'URL ne transiterait même plus par le
+  navigateur), il faudrait un petit relais côté serveur (ex. un Cloudflare Worker) — hors du périmètre « site 100 %
+  statique » de ce projet, mais tout à fait ajoutable si besoin.
 
 ## 4. Avant de publier
 

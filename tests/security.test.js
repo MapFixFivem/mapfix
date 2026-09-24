@@ -24,7 +24,11 @@ const LIMITS_RECAP_CONFLICTS = 20000;   // doit rester synchronisé avec LIMITS.
   check('aucune ressource externe (http/https) dans la page', !/(?:src|href)="https?:/i.test(html) && !/url\(\s*['"]?https?:/i.test(read('css/style.css')) && !/url\(\s*['"]?https?:/i.test(read('fonts/fonts.css')));
   check('aucun gestionnaire en ligne (onclick=…) ni script en ligne', !/\son[a-z]+\s*=\s*["']/i.test(html) && !Object.values(src).some(s => /\son(click|change|input|load|error)\s*=\s*["']/.test(s)) && !/<script(?![^>]*\bsrc=)[^>]*>\s*\S/i.test(html));
   check('aucun eval / new Function / document.write / setTimeout(string)', !Object.values(src).some(s => /\beval\s*\(|new Function\s*\(|document\.write\s*\(|setTimeout\(\s*['"`]/.test(s)));
-  check('aucun mot de passe, jeton ni webhook dans le code public (le site ne parle à aucun serveur)', !/adminPassword|discordWebhook|discord\.com\/api\/webhooks|password\s*[:=]\s*['"][^'"]{3,}|apiKey\s*[:=]/i.test(all));
+  // « discord.com/api/webhooks/ » seul (sans ID ni jeton) est autorisé : c'est juste le préfixe attendu, utilisé dans
+  // la validation (js/webhook.js) et le message d'erreur associé. Ce qui doit rester absent, c'est une VRAIE URL de
+  // webhook (avec son identifiant numérique et son jeton) — la seule chose qui compterait comme un secret committé.
+  check('aucun mot de passe, jeton ni vraie URL de webhook dans le code public (le site ne parle à aucun serveur)',
+    !/adminPassword|discordWebhook|discord(app)?\.com\/api\/webhooks\/\d+\/[\w-]{10,}|password\s*[:=]\s*['"][^'"]{3,}|apiKey\s*[:=]/i.test(all));
   // Le seul appel réseau du site est le webhook Discord facultatif, confiné à js/webhook.js et gardé par
   // CONFIG.webhookUrl : tous les autres fichiers restent sans fetch/XHR/WebSocket, comme avant.
   const NET_RE = /\bfetch\s*\(|new\s+XMLHttpRequest|new\s+WebSocket/;

@@ -1,17 +1,23 @@
 /* MapFix · webhook.js — Notifie un webhook Discord (Components V2) quand un client commence une analyse et quand il
-   télécharge son récapitulatif. Désactivé par défaut (CONFIG.webhookUrl vide) : tant que l'admin n'a pas collé son
-   URL de webhook dans js/config.js, cette page n'envoie rien nulle part, comme avant.
-   Un échec réseau (webhook supprimé, hors ligne…) ne doit jamais gêner le client : tout est avalé silencieusement.
+   télécharge son récapitulatif. Désactivé par défaut : tant que rien n'est réglé, cette page n'envoie rien nulle
+   part, comme avant. Un échec réseau (webhook supprimé, hors ligne…) ne doit jamais gêner le client : tout est
+   avalé silencieusement.
 
-   Note de sécurité (voir docs/SECURITE.md) : une URL de webhook Discord est un secret. Sur un site 100 % statique,
-   n'importe quel visiteur peut la lire dans js/config.js et l'utiliser lui-même pour poster de faux messages. Ce
-   n'est pas une fuite du site : c'est une limite du webhook appelé directement depuis le navigateur. Si le webhook
-   subit un jour du spam, il suffit de le supprimer et d'en recréer un autre côté Discord. */
+   Où mettre l'URL du webhook : JAMAIS dans js/config.js si le dépôt est public — une URL de webhook Discord est un
+   vrai secret (n'importe qui peut l'utiliser pour poster dans ton salon), et un fichier commis reste lisible pour
+   toujours dans l'historique GitHub, même après l'avoir « retiré ». Elle se règle donc uniquement dans TON
+   navigateur : triple-clique sur le logo MAPFIX du site en ligne, colle l'URL, valide. Elle est alors stockée en
+   local (localStorage), jamais envoyée nulle part d'autre, jamais commise dans le dépôt — seul ton navigateur la
+   connaît. Triple-clique de nouveau avec un champ vide pour la retirer. CONFIG.webhookUrl (js/config.js) reste un
+   simple repli pour un usage local/dépôt privé, désactivé (vide) par défaut. Voir docs/SECURITE.md. */
 'use strict';
 
 const wh = (() => {
   const COLOR_START = 0xffb04d, COLOR_FINAL = 0x4dffb0;
   const sentKeys = new Set();   // anti-doublon (le temps de l'onglet) : une seule alerte « nouvelle analyse » par dépôt identique
+
+  // L'URL réglée dans le navigateur (triple-clic sur le logo) prime toujours sur celle, facultative, de config.js.
+  const whUrl = () => load('mf_webhook_url', '') || CONFIG.webhookUrl;
 
   // Markdown Discord : on neutralise les caractères de mise en forme d'un texte saisi par le client (pseudo, message)
   // pour qu'il ne casse pas la mise en page. Les mentions (@everyone, rôles…) sont de toute façon coupées plus bas
@@ -19,7 +25,7 @@ const wh = (() => {
   const mdEsc = s => String(s).replace(/([\\`*_~|])/g, '\\$1').replace(/^>/gm, '\\>').replace(/\n{3,}/g, '\n\n');
 
   function post(components) {
-    const url = CONFIG.webhookUrl;
+    const url = whUrl();
     if (!url) return;
     try {
       fetch(url, {
@@ -36,7 +42,7 @@ const wh = (() => {
   const rel = () => `<t:${Math.floor(Date.now() / 1000)}:R>`;
 
   function start(state) {
-    if (!CONFIG.webhookUrl || CONFIG.webhookOnStart === false) return;
+    if (!whUrl() || CONFIG.webhookOnStart === false) return;
     const key = state.resources.map(r => r.name).sort().join('|') + '·' + state.totalFiles;
     if (sentKeys.has(key)) return;
     sentKeys.add(key);
@@ -60,7 +66,7 @@ const wh = (() => {
   }
 
   function final(data, q) {
-    if (!CONFIG.webhookUrl || CONFIG.webhookOnSend === false) return;
+    if (!whUrl() || CONFIG.webhookOnSend === false) return;
     const lines = q.groups.slice(0, 8).map(g => `• \`${g.res.join(' + ')}\` — ${eur(g.price)}`);
     if (q.groups.length > 8) lines.push(`_… +${q.groups.length - 8} autre(s)_`);
     post(box(COLOR_FINAL, [
@@ -79,5 +85,23 @@ const wh = (() => {
     ]));
   }
 
-  return { start, final };
+  return { start, final, get url() { return whUrl(); } };
 })();
+
+// Réglage discret, réservé à l'admin : triple-clic sur le logo pour saisir (ou effacer) l'URL du webhook dans CE
+// navigateur uniquement. Un client ne tombe pas dessus par hasard, et rien n'est jamais écrit dans le dépôt.
+{
+  let clicks = 0, clickT = null;
+  document.querySelector('.logo')?.addEventListener('click', e => {
+    if (++clicks < 3) { clearTimeout(clickT); clickT = setTimeout(() => (clicks = 0), 600); return; }
+    e.preventDefault();
+    clicks = 0;
+    const cur = load('mf_webhook_url', '');
+    const v = prompt('URL du webhook Discord (vide pour désactiver) — reste dans ce navigateur, jamais publiée :', cur);
+    if (v === null) return;
+    const clean = v.trim();
+    if (clean && !/^https:\/\/(discord|discordapp)\.com\/api\/webhooks\//.test(clean)) return toast(t('wh.bad'));
+    save('mf_webhook_url', clean);
+    toast(t(clean ? 'wh.on' : 'wh.off'));
+  });
+}

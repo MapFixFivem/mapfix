@@ -54,6 +54,38 @@ const check = (name, cond, extra = '') => { cond ? ok++ : ko++; console.log((con
   check('le pseudo piégé est bien présent tel quel dans le texte (les mentions sont neutralisées par Discord, pas retirées)', JSON.stringify(finalCall).includes('everyone'));
   check('un total en euros figure dans la notification finale', /€/.test(JSON.stringify(finalCall)));
 
+  /* ---- réglage discret par l'admin : triple-clic sur le logo (jamais dans le dépôt) ---- */
+  await page.evaluate(() => { CONFIG.webhookUrl = ''; localStorage.removeItem('mf_webhook_url'); window.__calls.length = 0; });
+
+  await page.evaluate(() => { window.prompt = () => 'pas une url discord'; });
+  await page.click('.logo'); await wait(80); await page.click('.logo'); await wait(80); await page.click('.logo');
+  await wait(150);
+  check('triple-clic : une adresse invalide est refusée (rien enregistré)', await page.evaluate(() => localStorage.getItem('mf_webhook_url') === null));
+
+  const real = 'https://discord.com/api/webhooks/999/depuis-le-navigateur';
+  await page.evaluate(u => { window.prompt = () => u; }, real);
+  await page.click('.logo'); await wait(80); await page.click('.logo'); await wait(80); await page.click('.logo');
+  await wait(150);
+  // stocké via save() comme le reste du site : la valeur est en JSON dans localStorage, on compare donc à JSON.stringify(real)
+  check('triple-clic : l\'URL saisie est stockée en local, jamais dans CONFIG', await page.evaluate(u => localStorage.getItem('mf_webhook_url') === JSON.stringify(u), real) && await page.evaluate(() => !CONFIG.webhookUrl));
+
+  // start() a un anti-doublon par contenu analysé : on revérifie donc via l'envoi du récapitulatif (final(), sans
+  // dédoublonnage), et on exige au moins un appel pour ne jamais valider un tableau vide par accident.
+  await page.evaluate(() => { window.__calls.length = 0; document.getElementById('btnSend').click(); });
+  await wait(300);
+  let sent = await page.evaluate(() => window.__calls.map(c => c.u));
+  check('la valeur réglée dans le navigateur est bien utilisée pour l\'envoi', sent.length > 0 && sent.every(u => u === real), JSON.stringify(sent));
+
+  await page.evaluate(() => { CONFIG.webhookUrl = 'https://discord.com/api/webhooks/1/config-js'; window.__calls.length = 0; document.getElementById('btnSend').click(); });
+  await wait(300);
+  sent = await page.evaluate(() => window.__calls.map(c => c.u));
+  check('la valeur du navigateur prime toujours sur CONFIG.webhookUrl', sent.length > 0 && sent.every(u => u === real), JSON.stringify(sent));
+
+  await page.evaluate(() => { window.prompt = () => ''; });
+  await page.click('.logo'); await wait(80); await page.click('.logo'); await wait(80); await page.click('.logo');
+  await wait(150);
+  check('triple-clic avec un champ vide efface le réglage local', await page.evaluate(() => JSON.parse(localStorage.getItem('mf_webhook_url')) === ''));
+
   console.log(ko ? `\n${ko} échec(s)` : '\nTout passe');
   console.log(errs.length ? 'ERREURS:\n' + errs.join('\n') : 'Aucune erreur JS/console');
   await browser.close();
