@@ -34,6 +34,24 @@ async function launch(puppeteer) {
   if (!browser) { child.kill(); throw lastErr || new Error('navigateur injoignable'); }
   const close = browser.close.bind(browser);
   browser.close = async () => { try { await close(); } catch {} try { child.kill(); } catch {} try { fs.rmSync(userDataDir, { recursive: true, force: true }); } catch {} };
+
+  // Le site embarque une vraie URL de webhook Discord (js/config.js). Pour qu'un `npm test` ne poste jamais dans le
+  // vrai salon, toute page créée par ce navigateur de test avale silencieusement les requêtes vers discord.com AVANT
+  // même que config.js ne s'exécute — webhook.test.js réinstalle son propre espion de fetch par-dessus pour observer
+  // ces appels sans jamais toucher au vrai réseau non plus.
+  const origNewPage = browser.newPage.bind(browser);
+  browser.newPage = async (...a) => {
+    const page = await origNewPage(...a);
+    await page.evaluateOnNewDocument(() => {
+      const real = window.fetch;
+      window.fetch = (input, init) => {
+        const url = typeof input === 'string' ? input : (input && input.url) || '';
+        if (/^https:\/\/discord(app)?\.com\//.test(url)) return Promise.resolve(new Response('{}', { status: 200 }));
+        return real ? real.call(window, input, init) : Promise.reject(new Error('fetch indisponible'));
+      };
+    });
+    return page;
+  };
   return browser;
 }
 

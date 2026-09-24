@@ -7,12 +7,14 @@ const CONFIG = {
   discordInvite: 'https://discord.gg/mapfix',   // lien d'invitation (ex. https://discord.gg/xxxx) : active le bouton Discord du header
   showDemo: false,     // true = affiche le bouton « Exemple » (charge de fausses ressources pour tester)
 
-  // Notifications automatiques (facultatif) : une alerte Discord à chaque analyse et à chaque récapitulatif
-  // téléchargé. NE PAS coller l'URL du webhook ici si le dépôt est public : elle resterait lisible pour toujours
-  // dans l'historique GitHub. Le réglage normal se fait dans le navigateur (triple-clic sur le logo du site en
-  // ligne) : voir js/webhook.js et docs/SECURITE.md. Ce champ ne sert que de repli pour un dépôt privé ou un test
-  // en local — il reste vide par défaut, et cette valeur ne prime jamais sur celle réglée dans le navigateur.
-  webhookUrl: '',
+  // Notifications automatiques : une alerte Discord à chaque analyse et à chaque récapitulatif téléchargé, pour
+  // TOUS les visiteurs (voir js/webhook.js). Choix assumé : cette URL est ici en clair, donc lisible par quiconque
+  // inspecte le site — c'est le prix à payer pour qu'un client déclenche vraiment la notification (un réglage
+  // uniquement local, comme le triple-clic sur le logo, ne le ferait que depuis TON navigateur, jamais depuis celui
+  // des clients). Un webhook ne permet que d'écrire dans ce salon, jamais de le lire ; en cas d'abus, supprime-le
+  // dans Discord et recrées-en un autre. Une valeur réglée par triple-clic sur le logo (localStorage) prime quand
+  // même sur celle-ci si elle existe. Voir docs/SECURITE.md.
+  webhookUrl: 'https://discord.com/api/webhooks/1552636466427863040/hnYU7-dtqKWL9dtxyxYnWDrQL-hy_yldzYmdpdzhshDSlZVFzBpTUy50dL8q1CtEkHep',
   webhookOnStart: true,   // alerte dès qu'une analyse aboutit (avant même que le client remplisse quoi que ce soit)
   webhookOnSend: true,    // alerte quand le client télécharge son récapitulatif (montant final, pseudo, message)
 };

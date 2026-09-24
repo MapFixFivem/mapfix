@@ -1,15 +1,13 @@
 /* MapFix · webhook.js — Notifie un webhook Discord (Components V2) quand un client commence une analyse et quand il
-   télécharge son récapitulatif. Désactivé par défaut : tant que rien n'est réglé, cette page n'envoie rien nulle
-   part, comme avant. Un échec réseau (webhook supprimé, hors ligne…) ne doit jamais gêner le client : tout est
-   avalé silencieusement.
+   télécharge son récapitulatif. Désactivé si CONFIG.webhookUrl est vide et rien n'est réglé dans le navigateur.
+   Un échec réseau (webhook supprimé, hors ligne…) ne doit jamais gêner le client : tout est avalé silencieusement.
 
-   Où mettre l'URL du webhook : JAMAIS dans js/config.js si le dépôt est public — une URL de webhook Discord est un
-   vrai secret (n'importe qui peut l'utiliser pour poster dans ton salon), et un fichier commis reste lisible pour
-   toujours dans l'historique GitHub, même après l'avoir « retiré ». Elle se règle donc uniquement dans TON
-   navigateur : triple-clique sur le logo MAPFIX du site en ligne, colle l'URL, valide. Elle est alors stockée en
-   local (localStorage), jamais envoyée nulle part d'autre, jamais commise dans le dépôt — seul ton navigateur la
-   connaît. Triple-clique de nouveau avec un champ vide pour la retirer. CONFIG.webhookUrl (js/config.js) reste un
-   simple repli pour un usage local/dépôt privé, désactivé (vide) par défaut. Voir docs/SECURITE.md. */
+   Où est l'URL du webhook : dans CONFIG.webhookUrl (js/config.js), en clair, choix assumé (voir le commentaire de ce
+   champ et docs/SECURITE.md) — c'est nécessaire pour que la notification parte vraiment quand un CLIENT (pas
+   l'admin) utilise le site : un réglage purement local ne s'appliquerait qu'au navigateur qui l'a saisi. Un webhook
+   Discord ne permet que d'écrire dans ce salon, jamais de le lire. En complément, un triple-clic sur le logo MAPFIX
+   permet à l'admin de régler (ou de tester) une autre URL depuis SON propre navigateur (stockée en localStorage,
+   jamais commise) : elle prime alors sur celle de config.js. */
 'use strict';
 
 const wh = (() => {

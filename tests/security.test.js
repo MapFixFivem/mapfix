@@ -24,11 +24,13 @@ const LIMITS_RECAP_CONFLICTS = 20000;   // doit rester synchronisé avec LIMITS.
   check('aucune ressource externe (http/https) dans la page', !/(?:src|href)="https?:/i.test(html) && !/url\(\s*['"]?https?:/i.test(read('css/style.css')) && !/url\(\s*['"]?https?:/i.test(read('fonts/fonts.css')));
   check('aucun gestionnaire en ligne (onclick=…) ni script en ligne', !/\son[a-z]+\s*=\s*["']/i.test(html) && !Object.values(src).some(s => /\son(click|change|input|load|error)\s*=\s*["']/.test(s)) && !/<script(?![^>]*\bsrc=)[^>]*>\s*\S/i.test(html));
   check('aucun eval / new Function / document.write / setTimeout(string)', !Object.values(src).some(s => /\beval\s*\(|new Function\s*\(|document\.write\s*\(|setTimeout\(\s*['"`]/.test(s)));
-  // « discord.com/api/webhooks/ » seul (sans ID ni jeton) est autorisé : c'est juste le préfixe attendu, utilisé dans
-  // la validation (js/webhook.js) et le message d'erreur associé. Ce qui doit rester absent, c'est une VRAIE URL de
-  // webhook (avec son identifiant numérique et son jeton) — la seule chose qui compterait comme un secret committé.
-  check('aucun mot de passe, jeton ni vraie URL de webhook dans le code public (le site ne parle à aucun serveur)',
-    !/adminPassword|discordWebhook|discord(app)?\.com\/api\/webhooks\/\d+\/[\w-]{10,}|password\s*[:=]\s*['"][^'"]{3,}|apiKey\s*[:=]/i.test(all));
+  // Choix assumé (voir docs/SECURITE.md) : CONFIG.webhookUrl (js/config.js) contient une vraie URL de webhook en
+  // clair — c'est le seul endroit où elle doit exister. On vérifie qu'elle n'est pas dupliquée ailleurs (copier-coller
+  // malheureux dans un autre fichier), et que les autres types de secrets restent absents.
+  const webhookLit = (src['config.js'].match(/webhookUrl:\s*'([^']*)'/) || [])[1] || '';
+  check('aucun mot de passe ni jeton d\'API dans le code public', !/adminPassword|password\s*[:=]\s*['"][^'"]{3,}|apiKey\s*[:=]/i.test(all));
+  check('l\'URL du webhook (si réglée) n\'existe que dans js/config.js, jamais dupliquée ailleurs',
+    !webhookLit || Object.entries(src).every(([f, s]) => f === 'config.js' || !s.includes(webhookLit)));
   // Le seul appel réseau du site est le webhook Discord facultatif, confiné à js/webhook.js et gardé par
   // CONFIG.webhookUrl : tous les autres fichiers restent sans fetch/XHR/WebSocket, comme avant.
   const NET_RE = /\bfetch\s*\(|new\s+XMLHttpRequest|new\s+WebSocket/;
@@ -51,7 +53,7 @@ const LIMITS_RECAP_CONFLICTS = 20000;   // doit rester synchronisé avec LIMITS.
   const page = await browser.newPage();
   const errs = []; page.on('pageerror', e => errs.push(e.message)); page.on('console', m => m.type() === 'error' && errs.push(m.text()));
   await page.setViewport({ width: 1400, height: 900 });
-  await page.evaluateOnNewDocument(() => { window.__fetches = 0; const f = window.fetch; window.fetch = (...a) => { window.__fetches++; return f.apply(window, a); }; });
+  await page.evaluateOnNewDocument(() => { window.__fetchUrls = []; const f = window.fetch; window.fetch = (...a) => { window.__fetchUrls.push(typeof a[0] === 'string' ? a[0] : a[0]?.url); return f.apply(window, a); }; });
   await page.goto(URL, { waitUntil: 'networkidle2' });
   await page.evaluate(() => { localStorage.clear(); sessionStorage.clear(); });
   await page.reload({ waitUntil: 'networkidle2' });
@@ -209,9 +211,13 @@ const LIMITS_RECAP_CONFLICTS = 20000;   // doit rester synchronisé avec LIMITS.
   });
   check('export : pseudo HTML, message trop long et aucun conflit coché sont refusés côté logique', /invalide/.test(inval) && /trop long/.test(inval) && /Sélectionne/.test(inval), inval);
 
-  /* ---- réseau : rien ne sort du site ---- */
-  const fetches = await E(() => window.__fetches);
-  check('aucune requête réseau émise par l\'application (fetch) — le site ne parle à aucun serveur', fetches === 0, String(fetches));
+  /* ---- réseau : rien ne sort vers un autre serveur que le webhook Discord ---- */
+  // Le site embarque un vrai webhook (CONFIG.webhookUrl) : une analyse et un envoi déclenchent donc réellement un
+  // fetch, mais UNIQUEMENT vers discord.com — jamais vers autre chose. Le navigateur de test avale ces requêtes
+  // avant qu'elles n'atteignent le réseau (tests/lib.js) ; on vérifie ici seulement leur destination.
+  const fetchUrls = await E(() => window.__fetchUrls);
+  check('les seules requêtes réseau émises visent le webhook Discord (jamais un autre serveur)',
+    fetchUrls.every(u => /^https:\/\/discord(app)?\.com\//.test(u)), JSON.stringify(fetchUrls));
 
   /* ---- anti-encadrement (clickjacking) ---- */
   const wrapper = path.join(SITE, '..', '__frame_test.html');

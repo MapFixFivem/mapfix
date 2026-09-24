@@ -1,6 +1,10 @@
-// Webhook Discord (Components V2) : rien par défaut (CONFIG.webhookUrl vide), et quand il est configuré, une
-// notification part au début de l'analyse et une autre au téléchargement du récapitulatif, bien formées et sans
-// mentions actives (protection anti-ping même si le pseudo/message contient "@everyone").
+// Webhook Discord (Components V2) : rien tant que ni CONFIG.webhookUrl ni le réglage local ne sont renseignés
+// (testé ici en le vidant explicitement, quelle que soit la vraie valeur embarquée dans js/config.js pour la
+// production), et quand il est configuré, une notification part au début de l'analyse et une autre au
+// téléchargement du récapitulatif, bien formées et sans mentions actives (protection anti-ping même si le
+// pseudo/message contient "@everyone"). Note : ce navigateur de test avale de toute façon tout fetch vers Discord
+// avant même que la page ne charge (voir tests/lib.js) — aucun de ces tests ne peut donc jamais toucher le vrai
+// webhook, qu'on l'espionne ici ou non.
 const puppeteer = require('puppeteer-core');
 const { URL, wait, launch } = require('./lib');
 
@@ -18,14 +22,17 @@ const check = (name, cond, extra = '') => { cond ? ok++ : ko++; console.log((con
   await page.evaluate(() => localStorage.clear());
   await page.reload({ waitUntil: 'networkidle2' });
 
-  // espionne fetch avant toute interaction (le webhook reste désactivé : CONFIG.webhookUrl est vide par défaut)
+  // Vide explicitement la vraie valeur de production (js/config.js) pour tester la logique de garde elle-même,
+  // indépendamment de ce qui est réellement configuré pour les vrais visiteurs.
+  await page.evaluate(() => { CONFIG.webhookUrl = ''; });
+  // espionne fetch avant toute interaction
   await page.evaluate(() => { window.__calls = []; window.fetch = (u, o) => { window.__calls.push({ u, o }); return Promise.resolve({ ok: true }); }; });
   await page.evaluate(() => document.getElementById('btnDemo').click());
   await wait(1000);
-  check('sans CONFIG.webhookUrl : aucun appel réseau à l\'analyse', (await page.evaluate(() => window.__calls.length)) === 0);
+  check('CONFIG.webhookUrl vide et rien en local : aucun appel réseau à l\'analyse', (await page.evaluate(() => window.__calls.length)) === 0);
   await page.click('#btnSend'); // pseudo vide -> échoue avant tout envoi, mais vérifie qu'aucun appel n'a été tenté
   await wait(200);
-  check('sans CONFIG.webhookUrl : toujours aucun appel réseau', (await page.evaluate(() => window.__calls.length)) === 0);
+  check('idem : toujours aucun appel réseau', (await page.evaluate(() => window.__calls.length)) === 0);
 
   // configure un faux webhook et une nouvelle analyse (avec un pseudo/message piégés : tentative de ping)
   await page.evaluate(() => { CONFIG.webhookUrl = 'https://discord.com/api/webhooks/1/faux-token'; });
@@ -85,6 +92,23 @@ const check = (name, cond, extra = '') => { cond ? ok++ : ko++; console.log((con
   await page.click('.logo'); await wait(80); await page.click('.logo'); await wait(80); await page.click('.logo');
   await wait(150);
   check('triple-clic avec un champ vide efface le réglage local', await page.evaluate(() => JSON.parse(localStorage.getItem('mf_webhook_url')) === ''));
+
+  /* ---- filet de sécurité au niveau réseau (pas seulement JS) : avec la VRAIE valeur de production (celle
+     embarquée dans js/config.js, pas un faux webhook de test), un vrai parcours ne doit laisser sortir AUCUNE
+     requête réseau réelle — même si le blocage JS de tests/lib.js venait un jour à être cassé par erreur. ---- */
+  const page2 = await browser.newPage();
+  const realReqs = [];
+  page2.on('request', r => { if (/^https:\/\/discord/.test(r.url())) realReqs.push(r.url()); });
+  await page2.setViewport({ width: 1440, height: 900 });
+  await page2.goto(URL, { waitUntil: 'networkidle2' });
+  await page2.evaluate(() => localStorage.clear());
+  await page2.reload({ waitUntil: 'networkidle2' });
+  await page2.evaluate(() => document.getElementById('btnDemo').click());
+  await wait(1000);
+  await page2.type('#discord', 'lenzo');
+  await page2.click('#btnSend');
+  await wait(400);
+  check('avec la vraie valeur de production : aucune requête réseau ne sort réellement pendant les tests', realReqs.length === 0, JSON.stringify(realReqs));
 
   console.log(ko ? `\n${ko} échec(s)` : '\nTout passe');
   console.log(errs.length ? 'ERREURS:\n' + errs.join('\n') : 'Aucune erreur JS/console');
